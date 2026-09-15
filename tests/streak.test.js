@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeStreaks } from '../edge-functions/_lib/streak.js';
+import { computeStreaks } from '../backend/_lib/streak.js';
 
 const TODAY = '2026-09-15';
 

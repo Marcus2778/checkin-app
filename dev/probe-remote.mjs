@@ -49,6 +49,17 @@ console.log(health.body)
 console.log('页面标题:', await page.title())
 console.log('可见文本:', JSON.stringify((await page.locator('body').innerText()).slice(0, 400)))
 
+// 站点可能压根没起来：默认域名的预览链接过期、项目被停、或者平台在维护。
+// 这时候拿到的是 EdgeOne 自己的错误页，后面的定位会全部超时，
+// 最后报一个跟真实原因毫无关系的 locator 错误。所以先确认加载的是不是我们的应用。
+if ((await page.getByRole('button', { name: /注册一个/ }).count()) === 0) {
+  console.log('\n⚠️  加载到的不是应用页面 —— 上面那段文本就是平台返回的内容。')
+  console.log('   若是 "Access Restricted" 之类的 401，多半是 *.edgeone.cool')
+  console.log('   默认域名的预览链接过期了（有时效），跟代码和 KV 都没关系。')
+  await browser.close()
+  process.exit(1)
+}
+
 // 注册一个账号，走到会触发 /api 请求的那一步
 await page.getByRole('button', { name: /注册一个/ }).click()
 await page.getByLabel('用户名').fill(`probe${Date.now().toString(36).slice(-6)}`)

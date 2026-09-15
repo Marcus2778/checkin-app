@@ -1,11 +1,11 @@
 /**
  * 本地 mock 后端（仅开发用，通过 `npm run dev:mock` 启用）。
  *
- * 关键点：它**直接复用 edge-functions/api 下真实的路由处理函数**，
- * 只是把 KV 换成了内存实现。所以这里不会出现"mock 和线上逻辑不一致"的问题 ——
+ * 关键点：它**直接复用 backend/api 下真实的路由处理函数**，
+ * 只把 KV 换成内存实现。所以这里不会出现"mock 和线上逻辑不一致"的问题 ——
  * 你在本地调出来的行为就是部署后的行为。
  *
- * 这样安排还有个好处：不需要先登录 EdgeOne、开通 KV 就能把前端跑起来。
+ * 这样安排还有个好处：不需要先注册云服务、开通数据库就能把前端跑起来。
  */
 
 import { existsSync } from 'node:fs'
@@ -14,9 +14,9 @@ import { fileURLToPath } from 'node:url'
 import { createMockKV } from './mock-kv.js'
 
 const projectRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..')
-const apiRoot = path.join(projectRoot, 'edge-functions', 'api')
+const apiRoot = path.join(projectRoot, 'backend', 'api')
 
-/** 把 /api/auth/login 映射到 edge-functions/api/auth/login.js */
+/** 把 /api/auth/login 映射到 backend/api/auth/login.js */
 function resolveHandlerPath(pathname) {
   const relative = pathname.replace(/^\/api\/?/, '').replace(/\/+$/, '')
   if (!relative || relative.includes('..')) return null

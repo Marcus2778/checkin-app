@@ -6,7 +6,7 @@ import {
   parseDateString,
   weekDates,
   weekday,
-} from '../edge-functions/_lib/date.js';
+} from '../backend/_lib/date.js';
 
 describe('beijingDateString', () => {
   it('UTC 当天白天，还是北京时间当天', () => {
