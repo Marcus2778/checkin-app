@@ -1,0 +1,82 @@
+@import 'tailwindcss';
+
+/*
+ * 这个界面想要的是一本集章本，而不是一块干净的面板。
+ * 所以配色只有三样东西：纸、墨、印泥。
+ * 全站唯一的有彩色就是印泥红 —— 它只出现在"你盖下的章"上。
+ */
+@theme {
+  --color-paper: #f2f2ef;
+  --color-ink: #1a1a18;
+  --color-muted: #6d6d66;
+  --color-line: #dcdcd6;
+  --color-seal: #b02a26;
+  /* 今天那个还没盖的空位。刻意不用红色 —— 红只留给真正盖下的章。 */
+  --color-slot: #cfccc4;
+
+  --font-sans:
+    'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', 'Noto Sans SC', system-ui,
+    -apple-system, 'Segoe UI', sans-serif;
+}
+
+html {
+  background: var(--color-paper);
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  font-family: var(--font-sans);
+  color: var(--color-ink);
+  font-variant-numeric: tabular-nums;
+}
+
+/*
+ * 纸张颗粒。用 feTurbulence 生成一张噪点图平铺，压到很低的透明度上。
+ * 作用很微妙但很关键：它把"纯色矢量面"变成"有点东西的纸面"，
+ * 这是让界面不像 AI 生成的最省力的一招。
+ */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+#root {
+  position: relative;
+  z-index: 1;
+}
+
+/*
+ * 盖章：从上方压下来，落到纸上时略微回弹一下。
+ * 全站只有这一处动效，它只在"你亲手盖下去"的那一下触发。
+ */
+@keyframes stamp-press {
+  0% {
+    transform: scale(1.45) rotate(-6deg);
+    opacity: 0;
+  }
+  45% {
+    transform: scale(0.93) rotate(1deg);
+    opacity: 1;
+  }
+  70% {
+    transform: scale(1.03) rotate(-0.5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}
