@@ -2,8 +2,8 @@ import { readdirSync, statSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { main } from '../backend/index.js';
-import { ROUTES, matchRoute, normalizePath } from '../backend/routes.js';
+import { main } from '../backend/app.mjs';
+import { ROUTES, matchRoute, normalizePath } from '../backend/routes.mjs';
 import { createMockKV } from '../dev/mock-kv.js';
 
 const backendRoot = path.resolve(
@@ -76,9 +76,9 @@ describe('路由匹配', () => {
         const full = path.join(dir, entry);
         if (statSync(full).isDirectory()) {
           walk(full, `${prefix}/${entry}`);
-        } else if (entry.endsWith('.js')) {
-          const name = entry.slice(0, -3);
-          // tasks/index.js → /api/tasks；auth/login.js → /api/auth/login
+        } else if (entry.endsWith('.mjs')) {
+          const name = entry.slice(0, -4);
+          // tasks/index.mjs → /api/tasks；auth/login.mjs → /api/auth/login
           expected.push(name === 'index' ? `/api${prefix}` : `/api${prefix}/${name}`);
         }
       }

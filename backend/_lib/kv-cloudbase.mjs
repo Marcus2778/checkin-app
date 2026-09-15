@@ -45,7 +45,14 @@ function unwrap({ data, error }, what) {
  * @param {string} [options.env] 环境 ID。云函数里默认用 SYMBOL_CURRENT_ENV 自动识别当前环境。
  */
 export function createCloudbaseKV({ env = cloudbase.SYMBOL_CURRENT_ENV } = {}) {
-  const db = cloudbase.init({ env }).rdb();
+  // ⚠️ 必须显式指定 database: 'public'。
+  //
+  // 看 SDK 源码（node-sdk/dist/cloudbase.js:104）：
+  //     const { instance = 'default', database = envId } = options || {};
+  // 这个 database 会被塞进 PostgREST 的 `Accept-Profile` 头，也就是 **schema 名**。
+  // 它的默认值是**环境 ID**，于是 SDK 会去找一个叫 `sm-d7gkxra3u0feddda0` 的
+  // schema，报 "Invalid schema: sm-d7gkxra3u0feddda0" —— 而我们的表在 public 里。
+  const db = cloudbase.init({ env }).rdb({ database: 'public' });
 
   return {
     async get(key) {

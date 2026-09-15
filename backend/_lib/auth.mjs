@@ -9,8 +9,8 @@
  * 老用户仍然能正常登录 —— 密码哈希方案要能平滑升级。
  */
 
-import { ApiError } from './http.js';
-import { getJson, putJson, sessionKey, userKey } from './kv.js';
+import { ApiError } from './http.mjs';
+import { getJson, putJson, sessionKey, userKey } from './kv.mjs';
 
 /**
  * PBKDF2 迭代次数。

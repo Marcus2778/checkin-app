@@ -7,29 +7,32 @@
   "functionRoot": "./backend",
   "functionDefaultConfig": {
     "type": "Event",
-    "runtime": "Nodejs20.19",
+    "runtime": "Nodejs24.11",
     "handler": "index.main",
     "timeout": 15,
-    "memorySize": 256
+    "memorySize": 256,
+    "installDependency": false
   },
   "functions": [
     {
       "name": "api",
       "description": "打卡应用的后端接口",
       "dir": "./backend",
-      "installDependency": true
+      "envVariables": {
+        "CLOUDBASE_APIKEY": "{{env.CHECKIN_APIKEY}}"
+      }
     }
   ],
 
   "gateway": {
     "routes": [
       { "path": "/", "target": "hosting:web" },
-      { "path": "/api/health", "target": "function:api" },
-      { "path": "/api/auth/register", "target": "function:api" },
-      { "path": "/api/auth/login", "target": "function:api" },
-      { "path": "/api/auth/logout", "target": "function:api" },
-      { "path": "/api/tasks", "target": "function:api" },
-      { "path": "/api/checkins", "target": "function:api" }
+      { "path": "/api/health", "target": "function:api", "enablePathTransmission": true },
+      { "path": "/api/auth/register", "target": "function:api", "enablePathTransmission": true },
+      { "path": "/api/auth/login", "target": "function:api", "enablePathTransmission": true },
+      { "path": "/api/auth/logout", "target": "function:api", "enablePathTransmission": true },
+      { "path": "/api/tasks", "target": "function:api", "enablePathTransmission": true },
+      { "path": "/api/checkins", "target": "function:api", "enablePathTransmission": true }
     ]
   },
 

@@ -1,6 +1,6 @@
-import { createSession, validateCredentials, verifyCredentials } from '../../_lib/auth.js';
-import { ApiError, json, readJson, withHandler } from '../../_lib/http.js';
-import { getKV } from '../../_lib/kv.js';
+import { createSession, validateCredentials, verifyCredentials } from '../../_lib/auth.mjs';
+import { ApiError, json, readJson, withHandler } from '../../_lib/http.mjs';
+import { getKV } from '../../_lib/kv.mjs';
 
 const handle = withHandler(async (context) => {
   if (context.request.method !== 'POST') throw new ApiError('只支持 POST', 405);

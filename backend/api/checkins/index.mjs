@@ -1,8 +1,8 @@
-import { requireUser } from '../../_lib/auth.js';
-import { beijingDateString, weekDates } from '../../_lib/date.js';
-import { ApiError, json, readJson, withHandler } from '../../_lib/http.js';
-import { getKV } from '../../_lib/kv.js';
-import { loadCheckinOverview, toggleTask } from '../../_lib/store.js';
+import { requireUser } from '../../_lib/auth.mjs';
+import { beijingDateString, weekDates } from '../../_lib/date.mjs';
+import { ApiError, json, readJson, withHandler } from '../../_lib/http.mjs';
+import { getKV } from '../../_lib/kv.mjs';
+import { loadCheckinOverview, toggleTask } from '../../_lib/store.mjs';
 
 /**
  * GET  /api/checkins  一次返回今天的状态、本周 7 天记录和连续打卡统计

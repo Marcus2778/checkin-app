@@ -22,8 +22,8 @@ function resolveHandlerPath(pathname) {
   if (!relative || relative.includes('..')) return null
 
   const candidates = [
-    path.join(apiRoot, `${relative}.js`),
-    path.join(apiRoot, relative, 'index.js'),
+    path.join(apiRoot, `${relative}.mjs`),
+    path.join(apiRoot, relative, 'index.mjs'),
   ]
   return candidates.find((candidate) => existsSync(candidate)) ?? null
 }

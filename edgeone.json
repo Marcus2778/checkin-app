@@ -1,6 +1,0 @@
-{
-  "$schema": "https://cdnstatic.tencentcs.com/edgeone/pages/docs/edgeone.schema.json",
-  "outputDirectory": "dist",
-  "buildCommand": "npm run build",
-  "installCommand": "npm install"
-}

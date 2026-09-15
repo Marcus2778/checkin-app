@@ -11,7 +11,7 @@
  *   node dev/bench-pbkdf2.mjs
  */
 
-import { createUser, verifyCredentials, PBKDF2_ITERATIONS } from '../backend/_lib/auth.js'
+import { createUser, verifyCredentials, PBKDF2_ITERATIONS } from '../backend/_lib/auth.mjs'
 
 /** auth.js 需要的 KV 接口：get / put / delete，够用就行 */
 function makeFakeKV() {

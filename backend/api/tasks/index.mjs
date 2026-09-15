@@ -1,6 +1,6 @@
-import { requireUser } from '../../_lib/auth.js';
-import { ApiError, json, readJson, withHandler } from '../../_lib/http.js';
-import { getKV } from '../../_lib/kv.js';
+import { requireUser } from '../../_lib/auth.mjs';
+import { ApiError, json, readJson, withHandler } from '../../_lib/http.mjs';
+import { getKV } from '../../_lib/kv.mjs';
 import {
   addTask,
   deleteTask,
@@ -8,7 +8,7 @@ import {
   resyncToday,
   updateTask,
   validateTaskInput,
-} from '../../_lib/store.js';
+} from '../../_lib/store.mjs';
 
 /**
  * GET    /api/tasks         任务列表

@@ -6,7 +6,7 @@
  * 把它隔离成纯函数是为了能穷举边界情况。
  */
 
-import { addDays } from './date.js';
+import { addDays } from './date.mjs';
 
 /**
  * @param {string[]} completedDates 已完成打卡的日期（'YYYY-MM-DD'），顺序和重复都无所谓

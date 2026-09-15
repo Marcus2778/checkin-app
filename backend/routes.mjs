@@ -10,12 +10,12 @@
  * 所以这里必须是显式映射，不能像边缘函数那样靠文件系统路由。
  */
 
-import { onRequest as checkins } from './api/checkins/index.js';
-import { onRequest as health } from './api/health.js';
-import { onRequest as login } from './api/auth/login.js';
-import { onRequest as logout } from './api/auth/logout.js';
-import { onRequest as register } from './api/auth/register.js';
-import { onRequest as tasks } from './api/tasks/index.js';
+import { onRequest as checkins } from './api/checkins/index.mjs';
+import { onRequest as health } from './api/health.mjs';
+import { onRequest as login } from './api/auth/login.mjs';
+import { onRequest as logout } from './api/auth/logout.mjs';
+import { onRequest as register } from './api/auth/register.mjs';
+import { onRequest as tasks } from './api/tasks/index.mjs';
 
 export const ROUTES = {
   '/api/health': health,

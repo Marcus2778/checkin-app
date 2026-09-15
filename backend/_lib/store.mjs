@@ -11,8 +11,8 @@
  * 周详情时才需要读。
  */
 
-import { ApiError } from './http.js';
-import { beijingDateKey, beijingDateString } from './date.js';
+import { ApiError } from './http.mjs';
+import { beijingDateKey, beijingDateString } from './date.mjs';
 import {
   dateKeyFromRecordKey,
   getJson,
@@ -21,8 +21,8 @@ import {
   putJson,
   recordKey,
   tasksKey,
-} from './kv.js';
-import { computeStreaks } from './streak.js';
+} from './kv.mjs';
+import { computeStreaks } from './streak.mjs';
 
 export const TASK_TYPES = ['daily', 'once'];
 const MAX_TITLE = 60;

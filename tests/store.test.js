@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isDayComplete, todoTasksFor } from '../backend/_lib/store.js';
+import { isDayComplete, todoTasksFor } from '../backend/_lib/store.mjs';
 
 const TODAY = '2026-09-15';
 const YESTERDAY = '2026-09-14';

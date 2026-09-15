@@ -2,7 +2,6 @@
   "name": "checkin-backend",
   "private": true,
   "version": "0.0.0",
-  "type": "module",
   "description": "打卡应用的后端：CloudBase 云函数。业务逻辑在 _lib/ 下，平台适配在 index.js 和 _lib/kv-cloudbase.js。",
   "main": "index.js",
   "dependencies": {
