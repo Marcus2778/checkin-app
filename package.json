@@ -9,7 +9,9 @@
     "build": "tsc -b && vite build",
     "lint": "oxlint",
     "test": "vitest run",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "bench": "node dev/bench-pbkdf2.mjs",
+    "shots:remote": "node dev/probe-remote.mjs"
   },
   "dependencies": {
     "react": "^19.2.8",

@@ -14,7 +14,8 @@
  *    所以 key 一律用下划线拼接，日期用 YYYYMMDD。
  */
 
-const KV_BINDING_NAME = 'CHECKIN_KV';
+/** 绑定时必须用这个名字，改这里等于换一个绑定 */
+export const KV_BINDING_NAME = 'CHECKIN_KV';
 
 /** EdgeOne KV 允许的 key 字符集 */
 export const KEY_PATTERN = /^[a-zA-Z0-9_]+$/;

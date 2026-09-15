@@ -54,9 +54,11 @@ npm run dev:mock
 其他命令：
 
 ```bash
-npm test        # 68 个测试
-npm run build   # 类型检查 + 打包
+npm test                  # 74 个测试
+npm run build             # 类型检查 + 打包
+npm run bench             # 实测一次 PBKDF2 要跑多久（密码哈希强度靠它定）
 node dev/screenshot.mjs   # 用真实浏览器跑一遍流程并截图到 dev/shots
+node dev/probe-remote.mjs # 打开线上站点看一眼（KV 没绑时就用它看错误界面）
 ```
 
 ## 项目结构
@@ -71,6 +73,7 @@ edge-functions/          后端（部署到 EdgeOne 的边缘函数）
 │   ├── store.js         任务 / 打卡 / 统计的业务逻辑
 │   └── http.js          响应与错误处理
 └── api/                 路由，一个文件一个接口
+    ├── health.js          自检：KV 绑好没有
     ├── auth/{register,login,logout}.js
     ├── tasks/index.js
     └── checkins/index.js
@@ -87,6 +90,9 @@ src/                     前端
 └── pages/               LoginPage / DashboardPage
 
 dev/                     仅开发用：内存 KV、mock 后端、截图脚本
+├── mock-kv.js           内存版 KV，故意把每页限成 3 条来逼出翻页 bug
+├── bench-pbkdf2.mjs     实测密码哈希耗时
+└── probe-remote.mjs     用真实浏览器看线上站点
 tests/                   单元测试 + 后端接口集成测试
 ```
 
@@ -96,6 +102,7 @@ tests/                   单元测试 + 后端接口集成测试
 
 | 方法 | 路径 | 作用 |
 | --- | --- | --- |
+| GET | `/api/health` | 自检：KV 绑定好没有（不用登录） |
 | POST | `/api/auth/register` | 注册 |
 | POST | `/api/auth/login` | 登录 |
 | POST | `/api/auth/logout` | 退出 |
@@ -143,7 +150,25 @@ edgeone login
 3. 把这个命名空间**绑定到项目**，绑定时的**变量名必须填 `CHECKIN_KV`**
 
 最后这一步不能写错：代码里就是靠 `CHECKIN_KV` 这个名字拿存储的
-（见 `edge-functions/_lib/kv.js`）。
+（见 `edge-functions/_lib/kv.js`）。绑完重新部署一次，然后打开自检接口确认：
+
+```
+https://你的域名/api/health
+```
+
+看到 `{"ok":true,"kv":"bound",...}` 就说明通了。如果返回 503，响应里的 `hint`
+会直接告诉你缺什么 —— 不用去猜为什么所有接口都 500。
+
+> ⚠️ **必须用浏览器打开，别用 curl。**
+> `*.edgeone.cool` 这个默认域名外面套了一层预览网关，它要求浏览器执行 JS
+> 校验 token。`curl` / `Invoke-WebRequest` 这类不会跑 JS 的客户端会被直接挡在
+> **平台自己的 401 页面**（"Access Restricted or Authentication Expired"）上 ——
+> 那个 401 不是你的应用返回的，跟 KV 有没有绑好毫无关系。
+>
+> 命令行里想自检就用 `npm run shots:remote`，它是用真实浏览器去请求的。
+
+> KV 命名空间的开通需要平台审批，可能要等一会儿。这期间前端部署本身是好的
+> （页面能打开），只是所有 `/api/*` 都会返回 500。
 
 ### 3. 关联项目到本地
 
@@ -186,9 +211,29 @@ edgeone makers deploy
 
 3. **Edge Functions 不支持 npm，而且有 200ms 的 CPU 时间上限。**
    所以密码哈希只能用运行时的 Web Crypto 做 PBKDF2（不能用 bcrypt/argon2），
-   后端整体保持零依赖。迭代次数目前是 10 万次，存在用户记录里 ——
-   如果部署后发现登录变慢或超时，把 `auth.js` 里的 `PBKDF2_ITERATIONS` 调低
-   （降迭代次数不影响老用户登录，因为次数是跟着用户记录走的）。
+   后端整体保持零依赖。
+
+   迭代次数取 **30 万次**，这个数字是实测出来的而不是拍脑袋：`npm run bench`
+   在本机跑 10 万次约 10ms，30 万次约 30ms，只占 200ms 预算的 15%，
+   边缘节点再慢几倍也撞不到上限。
+
+   迭代次数存在用户记录里，于是**调高是安全的** —— 老用户下次登录时明文密码
+   正好在手上，顺手按新标准重算一遍存回去（见 `auth.js` 的 `verifyCredentials`）。
+
+   ⚠️ 但反过来不成立：**调低救不了已经注册的用户**。他们各自的记录里存着
+   自己的迭代次数，会继续按旧的高次数校验。所以线上第一次登录务必实测耗时，
+   别等人都注册完了才发现太慢。
+
+5. **登录接口是个天然的放大器。** 每次登录要烧掉约 30ms CPU，而
+   `PBKDF2` 的耗时正是它防爆破的原理。反过来说，有人拿别人的用户名狂撞密码，
+   就能替你烧掉 CPU 额度。目前**没有做频率限制** —— 自己和朋友用的量级下
+   没问题，但这是个该知道的缺口，不是"已经解决了"。
+
+6. **`*.edgeone.cool` 是平台的默认域名，官方定位是"演示和测试用"。**
+   它对浏览器可用，但对 curl 之类会 401（见上一节），长期也不适合当正式入口。
+   想稳定地把网址发给别人，要在控制台**绑定自己的域名**。另外要注意项目的
+   加速区域：国际站项目默认覆盖的是中国大陆以外的区域，真要让国内访问最快，
+   需要备案过的域名走大陆节点。
 
 4. **KV 的 key 有字符集限制**，所以用户名只允许字母、数字、下划线，
    注册时就卡住了，避免写出非法 key。

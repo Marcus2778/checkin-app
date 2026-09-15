@@ -12,8 +12,21 @@
 import { ApiError } from './http.js';
 import { getJson, putJson, sessionKey, userKey } from './kv.js';
 
-/** 起始迭代次数。如果部署后登录接口逼近 200ms CPU 上限，把这个值调低。 */
-export const PBKDF2_ITERATIONS = 100_000;
+/**
+ * PBKDF2 迭代次数。
+ *
+ * 这个数字是**实测**出来的，不是拍脑袋定的：`node dev/bench-pbkdf2.mjs`
+ * 在本机跑 10 万次约 10ms，而 Edge Functions 的 CPU 上限是 200ms。
+ * 取 30 万次约 30ms，留了 6 倍余量，边缘节点比本机慢一些也撞不到上限。
+ *
+ * 之前的 10 万次偏低 —— OWASP 对 PBKDF2-SHA256 的建议值在 60 万次这个量级。
+ *
+ * ⚠️ KV 绑定好之后要做的第一件事，就是实测一次线上登录耗时来确认这个数。
+ * 调高是安全的：老用户下次登录时会自动重算成新标准（见 verifyCredentials）。
+ * 但**调低救不了已经注册的用户** —— 迭代次数存在他们各自的记录里，
+ * 会继续按旧的高次数校验。
+ */
+export const PBKDF2_ITERATIONS = 300_000;
 const SALT_BYTES = 16;
 const SESSION_DAYS = 7;
 
@@ -82,6 +95,19 @@ export async function verifyCredentials(kv, username, password) {
   if (!timingSafeEqual(actual, fromHex(user.hash))) {
     throw new ApiError('用户名或密码错误', 401);
   }
+
+  // 迭代次数存在用户记录里的意义就在这里：老用户的哈希是按注册当年的标准算的，
+  // 而此刻明文密码正好在手上，顺手按当前标准重算一遍存回去。
+  // 于是迭代次数可以随时间平滑上涨，不会把老用户锁在旧标准上。
+  // （"登录成功的瞬间升级密码哈希"是通行做法，代价只是这一次登录慢一点。）
+  if (user.iterations < PBKDF2_ITERATIONS) {
+    const salt = crypto.getRandomValues(new Uint8Array(SALT_BYTES));
+    user.salt = toHex(salt);
+    user.hash = toHex(await derive(password, salt, PBKDF2_ITERATIONS));
+    user.iterations = PBKDF2_ITERATIONS;
+    await putJson(kv, userKey(username), user);
+  }
+
   return user;
 }
 

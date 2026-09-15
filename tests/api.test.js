@@ -1,9 +1,11 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import { onRequest as checkinsRoute } from '../edge-functions/api/checkins/index.js'
+import { onRequest as healthRoute } from '../edge-functions/api/health.js'
 import { onRequest as loginRoute } from '../edge-functions/api/auth/login.js'
 import { onRequest as logoutRoute } from '../edge-functions/api/auth/logout.js'
 import { onRequest as registerRoute } from '../edge-functions/api/auth/register.js'
 import { onRequest as tasksRoute } from '../edge-functions/api/tasks/index.js'
+import { PBKDF2_ITERATIONS } from '../edge-functions/_lib/auth.js'
 import { addDays, beijingDateString } from '../edge-functions/_lib/date.js'
 import { createMockKV } from '../dev/mock-kv.js'
 
@@ -408,5 +410,112 @@ describe('账号隔离', () => {
 
     const alice = await call(checkinsRoute, { token: aliceToken })
     expect(alice.body.stats.total).toBe(3)
+  })
+})
+
+/**
+ * 手写一条"旧版代码留下的"用户记录：迭代次数还是当年的低标准。
+ * 这里刻意自己算一遍 PBKDF2 而不用 auth.js 里的函数 —— 要测的就是
+ * "用旧标准存下来的记录，能不能被新代码正确接手"。
+ */
+async function seedLegacyUser(username, password, iterations) {
+  const salt = crypto.getRandomValues(new Uint8Array(16))
+  const key = await crypto.subtle.importKey(
+    'raw',
+    new TextEncoder().encode(password),
+    'PBKDF2',
+    false,
+    ['deriveBits'],
+  )
+  const bits = await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt, iterations, hash: 'SHA-256' },
+    key,
+    256,
+  )
+  const hex = (bytes) => [...bytes].map((b) => b.toString(16).padStart(2, '0')).join('')
+
+  kv.store.set(
+    `user_${username}`,
+    JSON.stringify({
+      username,
+      salt: hex(salt),
+      hash: hex(new Uint8Array(bits)),
+      iterations,
+      createdAt: new Date().toISOString(),
+    }),
+  )
+}
+
+describe('密码哈希的平滑升级', () => {
+  it('老用户登录成功后，迭代次数升到当前标准', async () => {
+    await seedLegacyUser('olduser', 'hunter22', 1_000)
+    const before = JSON.parse(kv.store.get('user_olduser'))
+    expect(before.iterations).toBe(1_000)
+
+    const result = await call(loginRoute, {
+      method: 'POST',
+      body: { username: 'olduser', password: 'hunter22' },
+    })
+    expect(result.status).toBe(200)
+
+    const after = JSON.parse(kv.store.get('user_olduser'))
+    expect(after.iterations).toBe(PBKDF2_ITERATIONS)
+    expect(after.hash).not.toBe(before.hash)
+    // salt 也换了：新哈希配新 salt，不能沿用旧的
+    expect(after.salt).not.toBe(before.salt)
+  })
+
+  it('升级之后原密码仍然能登录', async () => {
+    await seedLegacyUser('olduser', 'hunter22', 1_000)
+    await call(loginRoute, {
+      method: 'POST',
+      body: { username: 'olduser', password: 'hunter22' },
+    })
+
+    const again = await call(loginRoute, {
+      method: 'POST',
+      body: { username: 'olduser', password: 'hunter22' },
+    })
+    expect(again.status).toBe(200)
+    expect(again.body.token).toBeTruthy()
+  })
+
+  it('密码错误时不会升级（失败不该产生写入）', async () => {
+    await seedLegacyUser('olduser', 'hunter22', 1_000)
+
+    const result = await call(loginRoute, {
+      method: 'POST',
+      body: { username: 'olduser', password: 'wrongpass' },
+    })
+    expect(result.status).toBe(401)
+
+    // 关键：登录失败必须原样不动。否则拿别人的用户名乱撞密码，
+    // 每次都能触发一次 30 万次的哈希重算，等于白送攻击者一个放大器。
+    expect(JSON.parse(kv.store.get('user_olduser')).iterations).toBe(1_000)
+  })
+})
+
+describe('自检接口', () => {
+  it('KV 可用时返回 ok', async () => {
+    const result = await call(healthRoute)
+    expect(result.status).toBe(200)
+    expect(result.body.ok).toBe(true)
+    expect(result.body.binding).toBe('CHECKIN_KV')
+  })
+
+  it('KV 没绑定时返回 503，并把变量名和怎么办写清楚', async () => {
+    delete globalThis.CHECKIN_KV
+
+    const result = await call(healthRoute)
+    expect(result.status).toBe(503)
+    expect(result.body.ok).toBe(false)
+    expect(result.body.kv).toBe('missing')
+    // 提示里必须点名 CHECKIN_KV —— 绑错变量名是这一步最常见的错法
+    expect(result.body.hint).toContain('CHECKIN_KV')
+  })
+
+  it('不需要登录也能访问（部署出问题时得先能打开它）', async () => {
+    const result = await call(healthRoute) // 不传 token
+    expect(result.status).toBe(200)
   })
 })
