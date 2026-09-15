@@ -1,13 +1,13 @@
-import { destroySession } from '../../_lib/auth.js';
+import { destroySession, parseBearerToken } from '../../_lib/auth.js';
 import { ApiError, json, withHandler } from '../../_lib/http.js';
 import { getKV } from '../../_lib/kv.js';
 
 const handle = withHandler(async (context) => {
   if (context.request.method !== 'POST') throw new ApiError('只支持 POST', 405);
 
-  const header = context.request.headers.get('authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
-  await destroySession(getKV(context), token);
+  // 同样要用 parseBearerToken 过一道形状：token 会被拼进 KV 的 key，
+  // 畸形 token 直接当"没有 token"处理，不要让它打到存储层。
+  await destroySession(getKV(context), parseBearerToken(context));
 
   return json({ ok: true });
 });

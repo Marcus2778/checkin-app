@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.cloudbase.net/cli/cloudbaserc.schema.json",
+  "version": "2.1",
+  "envId": "sm-d7gkxra3u0feddda0",
+  "region": "ap-shanghai",
+
+  "functionRoot": "./backend",
+  "functionDefaultConfig": {
+    "type": "Event",
+    "runtime": "Nodejs20.19",
+    "handler": "index.main",
+    "timeout": 15,
+    "memorySize": 256
+  },
+  "functions": [
+    {
+      "name": "api",
+      "description": "打卡应用的后端接口",
+      "dir": "./backend",
+      "installDependency": true
+    }
+  ],
+
+  "gateway": {
+    "routes": [
+      { "path": "/", "target": "hosting:web" },
+      { "path": "/api/health", "target": "function:api" },
+      { "path": "/api/auth/register", "target": "function:api" },
+      { "path": "/api/auth/login", "target": "function:api" },
+      { "path": "/api/auth/logout", "target": "function:api" },
+      { "path": "/api/tasks", "target": "function:api" },
+      { "path": "/api/checkins", "target": "function:api" }
+    ]
+  },
+
+  "hosting": [
+    {
+      "name": "web",
+      "framework": "vite",
+      "buildCommand": "npm run build",
+      "outputDir": "dist",
+      "prune": true
+    }
+  ]
+}

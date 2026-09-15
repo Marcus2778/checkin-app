@@ -519,3 +519,39 @@ describe('自检接口', () => {
     expect(result.status).toBe(200)
   })
 })
+
+describe('畸形 token 的防御', () => {
+  // 这组是回归测试。原来的代码把客户端传来的 token 直接拼进 KV 的 key，
+  // 而 KV 的 key 只允许 [a-zA-Z0-9_]，于是带连字符的 token 会让底层存储抛错，
+  // 对外表现成 500 而不是 401。迁移到 CloudBase 时被新加的适配层测试逮到。
+
+  const MALFORMED = [
+    'not-a-real-token', // 连字符 —— 就是它触发了原来的 500
+    '', // 空
+    'a'.repeat(63), // 少一位
+    'a'.repeat(65), // 多一位
+    'A'.repeat(64), // 大写 hex，不在允许的形状里
+    'zzzz'.repeat(16), // 长度对但不是 hex
+    "'; DROP TABLE kv; --", // 想看看有没有拼串的机会
+  ]
+
+  for (const token of MALFORMED) {
+    it(`token=${JSON.stringify(token.slice(0, 24))} 时返回 401 而不是 500`, async () => {
+      const result = await call(tasksRoute, { token })
+      expect(result.status).toBe(401)
+      expect(result.body.error).toContain('登录')
+    })
+  }
+
+  it('登出接口拿到畸形 token 也不能崩', async () => {
+    const result = await call(logoutRoute, { method: 'POST', token: 'not-a-real-token' })
+    // 登出是幂等的：token 没形状就当没登录，返回成功即可，绝不能 500
+    expect(result.status).toBe(200)
+  })
+
+  it('形状合法但不存在的 token 仍然走正常路径返回 401', async () => {
+    const result = await call(tasksRoute, { token: 'a'.repeat(64) })
+    expect(result.status).toBe(401)
+    expect(result.body.error).toContain('登录已失效')
+  })
+})

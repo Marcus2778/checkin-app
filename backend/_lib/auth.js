@@ -120,10 +120,29 @@ export async function createSession(kv, username) {
   return { token, expiresAt };
 }
 
+/**
+ * 会话 token 的形状：32 字节随机数的 hex 表示，固定 64 位小写 hex。
+ *
+ * 为什么必须校验形状：客户端可以伪造任意 `Authorization: Bearer <字符串>`，
+ * 而这个字符串会被直接拼进 KV 的 key。KV 的 key 只允许 [a-zA-Z0-9_]，
+ * 于是 `Bearer not-a-real-token` 这种请求会让底层存储直接抛错 ——
+ * 对外表现成 **500 而不是 401**，既泄露了实现细节，也让日志里全是噪音。
+ * 所以要在**进存储之前**就把它挡住。
+ *
+ * （这是测试发现的真实缺陷：畸形 token 原本能打到存储层。）
+ */
+const TOKEN_PATTERN = /^[a-f0-9]{64}$/;
+
+/** 从 Authorization: Bearer <token> 取出形状合法的 token；不合法返回空串 */
+export function parseBearerToken(context) {
+  const header = context.request.headers?.get('authorization') ?? '';
+  const raw = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  return TOKEN_PATTERN.test(raw) ? raw : '';
+}
+
 /** 从 Authorization: Bearer <token> 解析出用户名 */
 export async function requireUser(context, kv) {
-  const header = context.request.headers.get('authorization') ?? '';
-  const token = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const token = parseBearerToken(context);
   if (!token) throw new ApiError('未登录', 401);
 
   const session = await getJson(kv, sessionKey(token));
