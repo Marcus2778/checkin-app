@@ -153,6 +153,9 @@ CREATE TABLE kv (
 
 ## §3 "提交打卡"的后端代码逐行解析
 
+> 💡 **如果这一节看不懂，先去看 [第零章：基础概念](learning-00-basics.md)。**
+> 那里补了 HTTP 请求/响应、前端后端分工、JavaScript 语法这三层地基。
+
 先定位：**POST `/api/checkins`**，文件是 `backend/api/checkins/index.mjs`。
 
 ### 3.1 路由怎么找到它
